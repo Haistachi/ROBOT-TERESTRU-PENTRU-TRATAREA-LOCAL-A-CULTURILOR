@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ro">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Robot</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+
+<body>
+    <header class="app-header">
+        <div>
+            <p class="eyebrow">Platformă mobilă controlată prin Wi-Fi</p>
+            <h1>Panou Control Robot</h1>
+        </div>
+        <div class="header-actions">
+            <button class="secondary" onclick="updateSystemStatus()">Verifică status</button>
+            <button class="danger" onclick="emergencyStop()">STOP URGENȚĂ</button>
+        </div>
+    </header>
+
+    <section class="status-bar" aria-label="Status conexiuni">
+        <div class="status-pill" id="serverPill"><span class="dot unknown"></span>Server: <strong id="serverStatus">-</strong></div>
+        <div class="status-pill" id="esp32Pill"><span class="dot unknown"></span>ESP32: <strong id="esp32Status">-</strong></div>
+        <div class="status-pill" id="arduinoPill"><span class="dot unknown"></span>Arduino: <strong id="arduinoStatus">-</strong></div>
+        <div class="status-pill" id="cameraPill"><span class="dot unknown"></span>Cameră: <strong id="cameraStatus">-</strong></div>
+        <div class="status-pill muted">Ultimul update: <strong id="lastUpdate">-</strong></div>
+    </section>
+
+    <main class="dashboard">
+        <section class="card span-full robot-card">
+            <div>
+                <h2>Selectare și configurare rapidă</h2>
+                <p>Robot activ: <span id="activeRobot">Robot principal</span></p>
+            </div>
+            <div class="quick-settings">
+                <label>IP ESP32
+                    <input type="text" id="esp32IpInput" placeholder="192.168.1.100">
+                </label>
+                <label>URL cameră
+                    <input type="text" id="cameraUrlInput" placeholder="http://192.168.1.100:81/stream">
+                </label>
+                <label>Refresh senzori
+                    <select id="refreshIntervalInput">
+                        <option value="500">0.5 s</option>
+                        <option value="1000" selected>1 s</option>
+                        <option value="2000">2 s</option>
+                        <option value="5000">5 s</option>
+                    </select>
+                </label>
+                <button onclick="saveSettings()">Salvează setări</button>
+            </div>
+        </section>
+
+        <section class="card span-full camera-card">
+            <div class="card-title-row">
+                <h2>Video ESP32-S3-CAM</h2>
+                <button class="secondary" onclick="reloadCamera()">Reîncarcă stream</button>
+            </div>
+            <div class="camera-layout">
+                <img id="cameraStream" src="http://192.168.1.100:81/stream" alt="Stream camera">
+                <aside class="shortcut-panel" aria-label="Scurtături tastatură">
+                    <h3>Scurtături din tastatură</h3>
+                    <div class="shortcut-grid">
+                        <kbd>W</kbd><span>Înainte</span>
+                        <kbd>S</kbd><span>Înapoi</span>
+                        <kbd>A</kbd><span>Stânga</span>
+                        <kbd>D</kbd><span>Dreapta</span>
+                        <kbd>Q</kbd><span>Rotire stânga</span>
+                        <kbd>E</kbd><span>Rotire dreapta</span>
+                        <kbd>Space</kbd><span>Stop deplasare</span>
+                        <kbd>I</kbd><span>Tun sus / aceeași tastă = stop</span>
+                        <kbd>K</kbd><span>Tun jos / aceeași tastă = stop</span>
+                        <kbd>J</kbd><span>Tun stânga / aceeași tastă = stop</span>
+                        <kbd>L</kbd><span>Tun dreapta / aceeași tastă = stop</span>
+                        <kbd>P</kbd><span>Pompă pornit/oprit</span>
+                        <kbd>Esc</kbd><span>STOP URGENȚĂ</span>
+                    </div>
+                    <p class="shortcut-note">Deplasarea este activă cât timp tasta este apăsată. Pentru tun, I/J/K/L pornesc mișcarea lentă, iar apăsarea din nou a aceleiași taste oprește axa.</p>
+                </aside>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Control deplasare</h2>
+            <div class="drive-pad">
+                <button onclick="moveRobot('forward')">Înainte</button>
+                <div>
+                    <button onclick="moveRobot('left')">Stânga</button>
+                    <button class="danger" onclick="moveRobot('stop')">Stop</button>
+                    <button onclick="moveRobot('right')">Dreapta</button>
+                </div>
+                <button onclick="moveRobot('backward')">Înapoi</button>
+            </div>
+            <label class="range-row">Viteză
+                <input type="range" id="moveSpeed" min="0" max="255" value="150">
+                <span id="moveSpeedValue">150</span>
+            </label>
+        </section>
+
+        <section class="card">
+            <h2>Control individual motoare</h2>
+            <div class="motor-grid">
+                <div>
+                    <h3>Motor stânga</h3>
+                    <select id="leftDirection">
+                        <option value="forward">Înainte</option>
+                        <option value="backward">Înapoi</option>
+                        <option value="stop">Stop</option>
+                    </select>
+                    <label class="range-row">PWM
+                        <input type="range" id="leftSpeed" min="0" max="255" value="150">
+                        <span id="leftSpeedValue">150</span>
+                    </label>
+                </div>
+                <div>
+                    <h3>Motor dreapta</h3>
+                    <select id="rightDirection">
+                        <option value="forward">Înainte</option>
+                        <option value="backward">Înapoi</option>
+                        <option value="stop">Stop</option>
+                    </select>
+                    <label class="range-row">PWM
+                        <input type="range" id="rightSpeed" min="0" max="255" value="150">
+                        <span id="rightSpeedValue">150</span>
+                    </label>
+                </div>
+            </div>
+            <button onclick="sendMotorControl()">Trimite control motoare</button>
+        </section>
+
+        <section class="card">
+            <h2>Pompă apă</h2>
+            <div class="button-row">
+                <button onclick="controlPump('on')">Pornește pompa</button>
+                <button class="secondary" onclick="controlPump('off')">Oprește pompa</button>
+            </div>
+        </section>
+
+        <section class="card turret-card">
+            <h2>Control tun apă</h2>
+            <p class="muted-text">Servouri cu rotație continuă, limitate software la ±90° față de poziția inițială.</p>
+
+            <div class="turret-axis">
+                <div class="turret-axis-header">
+                    <h3>Orizontal</h3>
+                    <strong><span id="turretHorizontalPosition">0.0</span>°</strong>
+                </div>
+                <div class="turret-buttons">
+                    <button onclick="controlTurret('H', 82)" title="Rapid sens orar">⏪ Rapid</button>
+                    <button onclick="controlTurret('H', 85)" title="Sens orar">◀ Lent</button>
+                    <button class="danger" onclick="controlTurret('H', 90)">■ Stop</button>
+                    <button onclick="controlTurret('H', 97)" title="Sens trigonometric">Lent ▶</button>
+                    <button onclick="controlTurret('H', 100)" title="Rapid sens trigonometric">Rapid ⏩</button>
+                </div>
+            </div>
+
+            <div class="turret-axis">
+                <div class="turret-axis-header">
+                    <h3>Vertical</h3>
+                    <strong><span id="turretVerticalPosition">0.0</span>°</strong>
+                </div>
+                <div class="turret-buttons">
+                    <button onclick="controlTurret('V', 82)">⏪ Rapid</button>
+                    <button onclick="controlTurret('V', 85)">◀ Lent</button>
+                    <button class="danger" onclick="controlTurret('V', 90)">■ Stop</button>
+                    <button onclick="controlTurret('V', 97)">Lent ▶</button>
+                    <button onclick="controlTurret('V', 100)">Rapid ⏩</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Radar ultrasonic</h2>
+            <label class="range-row">Unghi senzor ultrasonic
+                <input type="range" id="radarAngle" min="0" max="180" value="90">
+                <span id="radarAngleValue">90</span>
+            </label>
+            <button onclick="sendRadarControl()">Rotește senzorul</button>
+        </section>
+
+        <section class="card span-full">
+            <div class="card-title-row">
+                <h2>Dashboard senzori</h2>
+                <button class="secondary" onclick="updateSensors()">Actualizează manual</button>
+            </div>
+            <div class="sensor-grid">
+                <article class="sensor-tile"><span>Ultrasonic</span><strong><span id="ultrasonicValue">-</span> cm</strong></article>
+                <article class="sensor-tile"><span>IR stânga</span><strong id="irLeftValue">-</strong></article>
+                <article class="sensor-tile"><span>IR dreapta</span><strong id="irRightValue">-</strong></article>
+                <article class="sensor-tile"><span>Baterie</span><strong><span id="batteryVoltage">-</span> V</strong></article>
+                <article class="sensor-tile"><span>Acc X</span><strong id="accX">-</strong></article>
+                <article class="sensor-tile"><span>Acc Y</span><strong id="accY">-</strong></article>
+                <article class="sensor-tile"><span>Acc Z</span><strong id="accZ">-</strong></article>
+                <article class="sensor-tile"><span>Gyro X</span><strong id="gyroX">-</strong></article>
+                <article class="sensor-tile"><span>Gyro Y</span><strong id="gyroY">-</strong></article>
+                <article class="sensor-tile"><span>Gyro Z</span><strong id="gyroZ">-</strong></article>
+                <article class="sensor-tile"><span>GPS</span><strong id="gpsAvailable">-</strong></article>
+                <article class="sensor-tile"><span>Coordonate</span><strong><span id="gpsLat">-</span>, <span id="gpsLng">-</span></strong></article>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Status sistem</h2>
+            <p id="systemStatus">Aștept comandă...</p>
+        </section>
+
+        <section class="card">
+            <div class="card-title-row">
+                <h2>Jurnal evenimente</h2>
+                <button class="secondary" onclick="clearLog()">Curăță</button>
+            </div>
+            <ol id="eventLog" class="event-log"></ol>
+        </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>

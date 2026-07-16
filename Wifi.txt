@@ -1,0 +1,18 @@
+const char* ssid     = "DIGI-7a7Z";
+const char* password = "Xcs9AsaeXY"; 
+
+20:26:39.765 -> === Robot Gateway ESP32-S3-CAM ===
+20:26:39.765 -> [UART] Arduino: RX=GPIO20, TX=GPIO19, 9600 baud
+20:26:40.154 -> [CAMERA] OV2640 initializata
+20:26:40.218 -> [WIFI] Conectare...
+20:26:41.712 -> [WIFI] Conectat
+20:26:41.712 -> [STREAM] Server video pornit pe portul 81
+20:26:41.712 -> [HTTP] Control: http://192.168.1.142
+20:26:41.744 -> [HTTP] Stream:  http://192.168.1.142:81/stream
+
+ * Serving Flask app 'app'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.1.135:5000
