@@ -3,8 +3,8 @@
 #include <Arduino.h>
 
 // wifi
-inline constexpr const char* WIFI_SSID = "DIGI-7a7Z";
-inline constexpr const char* WIFI_PASSWORD = "Xcs9AsaeXY";
+inline constexpr const char* WIFI_SSID = "xxx";
+inline constexpr const char* WIFI_PASSWORD = "xxx";
 
 // comunicare arduino
 // GPIO19 = TX către RX arduino

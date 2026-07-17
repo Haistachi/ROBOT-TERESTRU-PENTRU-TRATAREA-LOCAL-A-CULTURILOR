@@ -1,10 +1,21 @@
 from __future__ import annotations
 
+import threading
+import webbrowser
+from pathlib import Path
+
 from flask import Flask, jsonify, render_template, request
+from waitress import serve
 
 from robot_client import RobotClient
 
-app = Flask(__name__)
+BASE_DIR = Path(__file__).resolve().parent
+
+app = Flask(
+    __name__,
+    template_folder=str(BASE_DIR / "templates"),
+    static_folder=str(BASE_DIR / "static"),
+)
 robot = RobotClient()
 
 
@@ -64,8 +75,6 @@ def control_turret():
     command = int(data.get("command", 90))
     if axis not in {"H", "V"}:
         return jsonify({"success": False, "error": "Axa turelei este invalidă"}), 400
-    if command not in {82, 85, 90, 97, 100}:
-        return jsonify({"success": False, "error": "Comanda servoului este invalidă"}), 400
     return jsonify(robot.request("/turret", {"axis": axis, "command": command}))
 
 
@@ -91,5 +100,16 @@ def system_status():
     return jsonify({"server": True, "esp32": details.get("success", False), "arduino": bool(details.get("arduino", False)), "camera": bool(details.get("camera", False)), "details": details})
 
 
+def open_browser() -> None:
+    webbrowser.open_new("http://127.0.0.1:5000")
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
+    threading.Timer(1.0, open_browser).start()
+
+    serve(
+        app,
+        host="0.0.0.0",
+        port=5000,
+        threads=8,
+    )
